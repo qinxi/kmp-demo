@@ -128,6 +128,6 @@ tasks.register<Copy>("release") {
 
 tasks.register("runOnGitHubAction") {
     group = "run"
-    description = "CI with Github Actions : .github/workflows/runOnGitHub.yml"
+    description = "CI with Github Actions : .github/workflows/release.yml"
     dependsOn("allTests", "allRun")
 }

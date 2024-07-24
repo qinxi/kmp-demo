@@ -1,4 +1,4 @@
-# .github/workflows/runOnGitHub.yml
+# .github/workflows/release.yml
 # GitHub Actions documentation
 # => https://docs.github.com/en/actions
 name: runOnGitHub
@@ -38,7 +38,7 @@ jobs:
       # Execute Gradle commands in GitHub Actions workflows
       # => https://github.com/marketplace/actions/gradle-command
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
       - name: Build with Gradle
         run: ./gradlew release
       - id: artifact
