@@ -123,7 +123,7 @@ application {
 tasks.register<Copy>("release") {
     group = "run"
     description = "Build the native executable"
-    dependsOn("runDebugExecutable$nativeTarget")
+    dependsOn("runReleaseExecutable$nativeTarget")
 }
 
 tasks.register("runOnGitHubAction") {

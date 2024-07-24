@@ -40,10 +40,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
       - name: Build with Gradle
-        run: ./gradlew runOnGithubAction
+        run: ./gradlew release
       - id: artifact
         name: Add build scan to the artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: buildscan-assemble
-          path: 'buildscan.log'
+          name: '${{ github.event.repository.name }}-${{ matrix.os }}-${{ github.sha }}'
+          path: build/bin/*/releaseExecutable/*
+          retention-days: 7
