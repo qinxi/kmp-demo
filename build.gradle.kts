@@ -125,3 +125,9 @@ tasks.register<Copy>("release") {
     description = "Build the native executable"
     dependsOn("runDebugExecutable$nativeTarget")
 }
+
+tasks.register("runOnGitHubAction") {
+    group = "run"
+    description = "CI with Github Actions : .github/workflows/runOnGitHub.yml"
+    dependsOn("allTests", "allRun")
+}
