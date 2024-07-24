@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmCompilation
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithHostTests
 
 
 val ktor_version: String by project
@@ -25,46 +27,65 @@ tasks.test {
     useJUnitPlatform()
 }
 
-kotlin {
-    val hostOs = System.getProperty("os.name")
-    val isArm64 = System.getProperty("os.arch") == "aarch64"
-    val isMingwX64 = hostOs.startsWith("Windows")
-    val nativeTarget = when {
-        hostOs == "Mac OS X" && isArm64 -> macosArm64("native")
-        hostOs == "Mac OS X" && !isArm64 -> macosX64("native")
-        hostOs == "Linux" && isArm64 -> linuxArm64("native")
-        hostOs == "Linux" && !isArm64 -> linuxX64("native")
-        isMingwX64 -> mingwX64("native")
-        else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
-    }
+val hostOs = System.getProperty("os.name")
+val isArm64 = System.getProperty("os.arch") == "aarch64"
+val isMingwX64 = hostOs.startsWith("Windows")
+val nativeTarget = when {
+    hostOs == "Mac OS X" && isArm64 -> "MacosArm64"
+    hostOs == "Mac OS X" && !isArm64 -> "MacosX64"
+    hostOs == "Linux" && !isArm64 -> "LinuxX64"
+    isMingwX64 -> "MingwX64"
+    else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
+}
 
-    val desktop = jvm("desktop") {
-        // cli.MainKt
-    }
-
-    nativeTarget.apply {
-        binaries {
-            executable {
-                entryPoint = "main"
-            }
+fun KotlinNativeTargetWithHostTests.configureTarget()=
+    binaries {
+        executable {
+            entryPoint = "main"
         }
     }
+fun KotlinNativeTarget.configureTarget()=
+    binaries {
+        executable {
+            entryPoint = "main"
+        }
+    }
+kotlin {
+    macosX64 { configureTarget() }
+    macosArm64{ configureTarget() }
+    mingwX64 { configureTarget() }
+    linuxX64 { configureTarget() }
+    linuxArm64 { configureTarget() }
+
+    val jvmTarget = jvm()
+
+
+
     sourceSets {
+        all {
+            languageSettings.apply {
+                optIn("kotlin.RequiresOptIn")
+                optIn("kotlinx.cinterop.ExperimentalForeignApi")
+            }
+        }
+
         val commonMain by getting  {
             dependencies {
                 implementation("io.ktor:ktor-client-core:$ktor_version")
             }
         }
 
-        val desktopMain: KotlinSourceSet by getting {
-            dependsOn(commonMain)
-            dependencies {
 
-                implementation("io.ktor:ktor-client-cio:$ktor_version")
+        arrayOf("macosX64", "macosArm64").forEach { targetName ->
+            getByName("${targetName}Main"){
+                dependsOn(commonMain)
+                dependencies {
+                    implementation("io.ktor:ktor-client-darwin:$ktor_version")
+                }
             }
         }
 
-        val nativeMain by getting {
+        val mingwX64Main by getting {
             dependsOn(commonMain)
 
             dependencies {
@@ -72,11 +93,18 @@ kotlin {
             }
         }
 
+        val linuxX64Main by getting {
+            dependsOn(commonMain)
+
+            dependencies {
+                implementation("io.ktor:ktor-client-curl:$ktor_version")
+            }
+        }
 
     }
     tasks.withType<JavaExec> {
         // code to make run task in kotlin multiplatform work
-        val compilation = desktop.compilations.getByName<KotlinJvmCompilation>("main")
+        val compilation = jvmTarget.compilations.getByName<KotlinJvmCompilation>("main")
 
         val classes = files(
             compilation.runtimeDependencyFiles,
@@ -89,4 +117,11 @@ kotlin {
 
 application {
     mainClass.set("cli.MainKt")
+}
+
+
+tasks.register<Copy>("release") {
+    group = "run"
+    description = "Build the native executable"
+    dependsOn("runDebugExecutable$nativeTarget")
 }
